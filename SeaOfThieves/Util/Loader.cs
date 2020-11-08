@@ -6,14 +6,14 @@ namespace SeaOfEase.SeaOfThieves.Util
 {
     public class Loader
     {
-        private List<Listener> Listeners = new List<Listener>();
+        private Listener listener = new Listener();
         private List<LivePacketDevice> EthDevices = new List<LivePacketDevice>();
 
         public void DefineSOT()
         {
-            Listener listener = new Listener { Title = Constants.SeaOfThievesTitle, Executable = Constants.SeaOfThievesExe };
+            listener.Executable = Constants.SeaOfThievesExe;
+            listener.Title = Constants.SeaOfThievesTitle;
             listener.FindAppPID();
-            Listeners.Add(listener);
         }
 
         public void GetEthernetDevice()
@@ -40,12 +40,12 @@ namespace SeaOfEase.SeaOfThieves.Util
 
         public void NetstatListener()
         {
-            Listeners[0].NetstatAppPID();
+            listener.NetstatAppPID();
         }
 
         public void InterceptListener()
         {
-            Listeners[0].InterceptPortPackets(EthDevices);
+            listener.InterceptPortPackets(EthDevices);
         }
     }
 }

@@ -64,8 +64,9 @@
     <Compile Include="SeaOfThieves\Constants\Constants.cs" />
     <Compile Include="SeaOfThieves\Game\Listener.cs" />
     <Compile Include="SeaOfThieves\Game\Port.cs" />
-    <Compile Include="SeaOfThieves\Util\GeoIP.cs" />
+    <Compile Include="SeaOfThieves\Util\ConsoleMsg.cs" />
     <Compile Include="SeaOfThieves\Util\Loader.cs" />
+    <Compile Include="SeaOfThieves\Util\Webhook.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

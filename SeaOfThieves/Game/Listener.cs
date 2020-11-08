@@ -6,7 +6,6 @@ using SeaOfEase.SeaOfThieves.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -21,6 +20,7 @@ namespace SeaOfEase.SeaOfThieves.Game
         private int PID = -1;
 
         private List<Port> Ports = new List<Port>();
+        private string PlayerName;
 
         PacketCommunicator pm = null;
 
@@ -31,23 +31,27 @@ namespace SeaOfEase.SeaOfThieves.Game
                 using (Process p = Process.GetProcessesByName(Executable).Last())
                 {
                     PID = p.Id;
-                    Console.Write($"[{DateTime.Now.ToString("H:mm:ss")}] ", Color.LightYellow);
-                    Console.Write("Found Sea of Thieves on [", Color.LightCyan);
-                    Console.Write(PID, Color.Cyan);
-                    Console.WriteLine("]", Color.LightCyan);
+                    ConsoleMsg.Write($"Found Sea of Thieves [{PID}]", ConsoleMsg.Type.Info);
+                }
+
+                if (!String.IsNullOrEmpty(Constants.DiscordWebHook))
+                {
+                    ConsoleMsg.Write("Type your nickname :", ConsoleMsg.Type.Info);
+                    PlayerName = Console.ReadLine();
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 //Console.WriteLine(String.Format("No PID: [{0}] '{1}'", Executable, Title));
             }
         }
 
-        public void NetstatAppPID(string prot = "UDP")
+        public void NetstatAppPID()
         {
+            string protocol = "UDP";
             if (PID < 0)
             {
-                PrintAppPIDInvalid();
+                ConsoleMsg.Write("Sea of Thieves is not running !", ConsoleMsg.Type.Error, true);
                 return;
             }
             try
@@ -55,7 +59,7 @@ namespace SeaOfEase.SeaOfThieves.Game
                 using (Process p = new Process())
                 {
                     ProcessStartInfo ps = new ProcessStartInfo();
-                    ps.Arguments = "-aonp " + prot;
+                    ps.Arguments = "-aonp " + protocol;
                     ps.FileName = "netstat.exe";
                     ps.UseShellExecute = false;
                     ps.WindowStyle = ProcessWindowStyle.Hidden;
@@ -78,14 +82,14 @@ namespace SeaOfEase.SeaOfThieves.Game
                     {
                         if (line.Contains(PID.ToString()))
                         {
-                            AddPort(line, prot);
+                            AddPort(line, protocol);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(String.Format("[{0}] {1}", ex.TargetSite, ex.Message));
+                ConsoleMsg.Write(ex.TargetSite + " " + ex.Message, ConsoleMsg.Type.Error);
             }
         }
 
@@ -96,7 +100,7 @@ namespace SeaOfEase.SeaOfThieves.Game
             if (netData.Length > 4 && (netData[1].Equals("UDP") || netData[1].Equals("TCP")))
             {
                 Ports.Add(
-                    new Game.Port
+                    new Port
                     {
                         Number = netData[2].Split(':')[1].Trim(),
                         PID = PID.ToString(),
@@ -111,8 +115,7 @@ namespace SeaOfEase.SeaOfThieves.Game
         {
             if (devices.Count == 0)
             {
-                Console.Write($"[{DateTime.Now.ToString("H:mm:ss")}] ", Color.LightYellow);
-                Console.WriteLine("Eth error", Color.PaleVioletRed);
+                ConsoleMsg.Write("Eth error", ConsoleMsg.Type.Error);
                 return;
             }
 
@@ -125,13 +128,11 @@ namespace SeaOfEase.SeaOfThieves.Game
                         using (pm = dev.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 500))
                         {
                             string filter = Ports[0].Protocol.ToLower() + " port " + Ports[0].Number;
-                            //Console.WriteLine(filter);
                             using (BerkeleyPacketFilter f = pm.CreateFilter(filter))
                             {
                                 pm.SetFilter(f);
                             }
 
-                            //Console.Write("Listening on device " + dev.Description);
                             pm.ReceivePackets(0, PrintPacketInfo);
                         }
                     }
@@ -140,16 +141,13 @@ namespace SeaOfEase.SeaOfThieves.Game
                 {
                     if (Process.GetProcessesByName(Constants.SeaOfThievesExe).Length > 0)
                     {
-                        Console.Write($"[{DateTime.Now.ToString("H:mm:ss")}] ", Color.LightYellow);
-                        Console.WriteLine("You are not connected to any game server !", Color.PaleVioletRed);
-                        Console.Write($"[{DateTime.Now.ToString("H:mm:ss")}] ", Color.LightYellow);
-                        Console.WriteLine("Press enter to refresh...", Color.GreenYellow);
+                        ConsoleMsg.Write("You are not connected to any game server !", ConsoleMsg.Type.Error, true);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(String.Format("[{0}] {1}", ex.TargetSite, ex.Message));
+                ConsoleMsg.Write(ex.TargetSite + " " + ex.Message, ConsoleMsg.Type.Error);
             }
         }
 
@@ -157,21 +155,12 @@ namespace SeaOfEase.SeaOfThieves.Game
         {
             if (PID < 0)
             {
-                PrintAppPIDInvalid();
-                return;
+                ConsoleMsg.Write("Sea of Thieves is not running !", ConsoleMsg.Type.Error, true);
             }
-            Console.Write($"[{DateTime.Now.ToString("H:mm:ss")}] ", Color.LightYellow);
-            Console.Write("Found Sea of Thieves on [", Color.LightCyan);
-            Console.Write(PID, Color.Cyan);
-            Console.WriteLine("]", Color.LightCyan);
-        }
-
-        private void PrintAppPIDInvalid()
-        {
-            Console.Write($"[{DateTime.Now.ToString("H:mm:ss")}] ", Color.LightYellow);
-            Console.WriteLine("Sea of Thieves is not running !", Color.PaleVioletRed);
-            Console.Write($"[{DateTime.Now.ToString("H:mm:ss")}] ", Color.LightYellow);
-            Console.WriteLine("Press enter to refresh...", Color.GreenYellow);
+            else
+            {
+                ConsoleMsg.Write($"Found Sea of Thieves [{PID}]", ConsoleMsg.Type.Info);
+            }
         }
 
         private void PrintPacketInfo(Packet packet)
@@ -181,48 +170,13 @@ namespace SeaOfEase.SeaOfThieves.Game
 
             if (!ip.Destination.ToString().Contains("192"))
             {
-                Console.Write($"[{packet.Timestamp.ToString("H:mm:ss")}] ", Color.LightYellow);
-                Console.Write("Connected to game server : ", Color.LightCyan);
-                Console.Write(ip.Destination, Color.Cyan);
-                Console.Write(":", Color.LightCyan);
-                Console.Write(udp.DestinationPort, Color.DarkCyan);
-
-                string[] serverLocation = GeoIP.GetIPLocation(ip.Destination.ToString());
-                if (serverLocation != null)
+                string server = ip.Destination + ":" + udp.DestinationPort;
+                ConsoleMsg.Write($"Connected to game server : {server}", ConsoleMsg.Type.Info, true);
+                if (!String.IsNullOrEmpty(Constants.DiscordWebHook))
                 {
-                    Console.WriteLine($" -> ({serverLocation[0]}, {serverLocation[2]})", Color.LightCyan);
+                    Webhook.SendMessage(PlayerName, server);
                 }
-
-                // Avoid infinite loop
                 pm.Break();
-                Console.Write($"[{DateTime.Now.ToString("H:mm:ss")}] ", Color.LightYellow);
-                Console.WriteLine("Press enter to refresh...", Color.GreenYellow);
-            }
-        }
-
-        private void FilterPortPackets(PacketCommunicator pm, string prot = "UDP")
-        {
-            string f = prot.ToLower() + " port " + Ports[0].Number;
-            Console.WriteLine(f);
-            using (BerkeleyPacketFilter filter = pm.CreateFilter(f))
-            {
-                pm.SetFilter(filter);
-            }
-            pm.ReceivePackets(5, PrintPacketInfo);
-        }
-
-        private void FilterPortPacket(PacketCommunicator pm, string prot = "UDP")
-        {
-            Packet packet;
-            PacketCommunicatorReceiveResult result = pm.ReceivePacket(out packet);
-
-            switch (result)
-            {
-                case PacketCommunicatorReceiveResult.Ok:
-                    Console.WriteLine(packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length);
-                    break;
-                default:
-                    throw new InvalidOperationException("The result " + result + " should never be reached here");
             }
         }
     }
